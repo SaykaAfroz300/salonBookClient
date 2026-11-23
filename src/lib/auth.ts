@@ -56,6 +56,12 @@ export const auth = betterAuth({
   baseURL,
   trustedOrigins,
   plugins: [nextCookies()],
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google"],
+    },
+  },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 6,

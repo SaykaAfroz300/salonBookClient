@@ -98,9 +98,11 @@ export default function SignUpPage() {
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
     try {
+      const origin = window.location.origin;
       await signIn.social({
         provider: "google",
-        callbackURL: "/dashboard",
+        callbackURL: `${origin}/dashboard`,
+        errorCallbackURL: `${origin}/sign-in`,
       });
     } catch (err: any) {
       toast.error(err?.message || "Google sign up failed.");

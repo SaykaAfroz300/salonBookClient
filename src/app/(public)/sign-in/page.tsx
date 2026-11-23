@@ -13,12 +13,21 @@ function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
+  const authError = searchParams.get("error");
   const { user, loading, refreshUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (authError) {
+      toast.error(
+        `Authentication failed (${authError.replace(/_/g, " ")}). Please try again.`
+      );
+    }
+  }, [authError]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -75,9 +84,13 @@ function SignInContent() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
+      const origin = window.location.origin;
+      const target =
+        callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/dashboard";
       await signIn.social({
         provider: "google",
-        callbackURL: callbackUrl || "/dashboard",
+        callbackURL: `${origin}${target}`,
+        errorCallbackURL: `${origin}/sign-in`,
       });
     } catch (err: any) {
       toast.error(err?.message || "Google sign in failed.");
