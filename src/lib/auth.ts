@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
+import { nextCookies } from "better-auth/next-js";
 import { MongoClient } from "mongodb";
 
 declare global {
@@ -12,34 +13,59 @@ const mongoUri =
 
 const client =
   globalThis._salonbookMongoClient ?? new MongoClient(mongoUri);
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis._salonbookMongoClient = client;
-}
+globalThis._salonbookMongoClient = client;
 
 const db = client.db();
 
+const normalizeUrl = (url?: string) =>
+  url ? url.trim().replace(/\/+$/, "") : "";
+
+const vercelProdUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : "";
+const vercelPreviewUrl = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "";
+
+const baseURL =
+  normalizeUrl(process.env.BETTER_AUTH_URL) ||
+  normalizeUrl(process.env.NEXT_PUBLIC_APP_URL) ||
+  vercelProdUrl ||
+  vercelPreviewUrl ||
+  "http://localhost:3000";
+
+const trustedOrigins = Array.from(
+  new Set(
+    [
+      baseURL,
+      normalizeUrl(process.env.NEXT_PUBLIC_APP_URL),
+      normalizeUrl(process.env.BETTER_AUTH_URL),
+      vercelProdUrl,
+      vercelPreviewUrl,
+      "http://localhost:3000",
+    ].filter(Boolean)
+  )
+);
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+
 export const auth = betterAuth({
   database: mongodbAdapter(db),
-  secret: process.env.BETTER_AUTH_SECRET,
-  baseURL:
-    process.env.BETTER_AUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:3000",
-  trustedOrigins: [
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    process.env.BETTER_AUTH_URL || "http://localhost:3000",
-  ].filter(Boolean),
+  secret: process.env.BETTER_AUTH_SECRET?.trim(),
+  baseURL,
+  trustedOrigins,
+  plugins: [nextCookies()],
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 6,
   },
   socialProviders:
-    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    googleClientId && googleClientSecret
       ? {
           google: {
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
           },
         }
       : undefined,
